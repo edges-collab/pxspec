@@ -12,13 +12,13 @@
 #include "stdafx.h"
 #include <px14.h>
 #include <fftw3.h>
-//#define NBR 2097152
-#define NBR 4194304
+#define NBR 2097152
+//#define NBR 4194304
 //#define NBR 8388608 spurs and slow
 #define NSIZ 65536
 #define PI 3.1415926536
-//#define DMA_XFER_SAMPLES		(NBR)
-#define DMA_XFER_SAMPLES		(2 * 1048576)
+#define DMA_XFER_SAMPLES		(NBR)
+//#define DMA_XFER_SAMPLES		(2 * 1048576)
 #define DMA_BUFFER_SAMPLES		(1 * DMA_XFER_SAMPLES)
 /// PX14400 board number (serial or 1-based index) to use
 #define MY_PX14400_BRD_NUM		1
@@ -60,6 +60,7 @@ int pxrun(int mode)
   dAcqRate = 400.0; 
   // -- Connect to and initialize the PX14400 device
   printf ("Connecting to and initializing PX14400 device...\n");
+	printf ("serial/board number: %d\n\n", MY_PX14400_BRD_NUM);
   res = ConnectToDevicePX14(&hBrd, MY_PX14400_BRD_NUM);
   if (res != SIG_SUCCESS)
     {
@@ -73,13 +74,16 @@ int pxrun(int mode)
   printf ("Connected to PX14400 #%u\n\n", sn);
 
   // Set all hardware settings into a known state
+  printf("Setting powerup defaults\n");
   res = SetPowerupDefaultsPX14(hBrd);
   if (SIG_SUCCESS != res) {
     DumpLibErrorPX14(res, "Failed to set powerup defaults: ", hBrd,0);
     return -1;
   }
 
-  SetActiveChannelsPX14(hBrd, PX14CHANNEL_ONE);
+  printf("Setting active channel\n");
+  SetActiveChannelsPX14(hBrd, PX14CHANNEL_ONE); /*JDB*/  // changed from channel ONE to TWO (hamdi 12/20/2012) 
+  SetTriggerSourcePX14(hBrd,PX14TRIGSRC_INT_CH1); // changed by Hamdi on 12/20/2012 
   res = SetInternalAdcClockRatePX14(hBrd, dAcqRate);
   if (SIG_SUCCESS != res)
     {
@@ -87,8 +91,8 @@ int pxrun(int mode)
       return -1;
     }
 
-
-  res = SetInputVoltRangeCh1PX14(hBrd,0);   // was zero
+  printf("Setting input voltage range\n");
+  res = SetInputVoltRangeCh1PX14(hBrd, 0);   // was zero
   if (SIG_SUCCESS != res)
     {
       DumpLibErrorPX14(res, "Failed to set input voltage: ", hBrd,0);
@@ -96,10 +100,10 @@ int pxrun(int mode)
     }
 
 
-
   // Allocate a DMA buffer that will receive PCI acquisition data. By 
   //  allocating a DMA buffer, we can use the "fast" PX14400 library
   //  transfer routines for highest performance
+  printf("Allocating DMA buffer\n");
   res = AllocateDmaBufferPX14(hBrd, DMA_BUFFER_SAMPLES, &dma_bufp);
   if (SIG_SUCCESS != res)
     {
@@ -110,14 +114,12 @@ int pxrun(int mode)
    }
   
   if(mode == 0){
-//  printf ("Arming board for acquisition\n");
   res = BeginBufferedPciAcquisitionPX14(hBrd,0);
   if (SIG_SUCCESS != res)
     {
       DumpLibErrorPX14(res, "Failed to arm recording: ", hBrd,0);
       return -1;
     }
-// printf("armed boarf\n");
 	
   // Main recording loop
     {
@@ -146,7 +148,7 @@ int pxrun(int mode)
       //  the RAM FIFO and return an error if the RAM FIFO overflowed at
       //  any point during the transfer.
       res = WaitForTransferCompletePX14(hBrd,0);
- 
+
       if (SIG_SUCCESS != res)
 	{
 	  if (SIG_CANCELLED == res)
@@ -168,7 +170,6 @@ int pxrun(int mode)
   // End the acquisition. Always do this since in ensures the board is 
   //  cleaned up properly
   EndBufferedPciAcquisitionPX14(hBrd);
-//  printf("leaving pxrun(0)\n");
   }
   if(mode == 1){
   for(i=0;i<NBR;i++) waveFormArray[i] = dma_bufp[i];

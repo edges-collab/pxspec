@@ -49,7 +49,8 @@ int pxrun(int,px14_sample_t *);
 void parport(int pdata)
 {
 #define ORIGINAL_DATA 0x3010 //base address of the SYBA Parallel port PCIe Card: NOT USED. Variable DATA (below) is used instead. The card has an address 2010. Raul, 2014/01/16.  
-#define DATA 0x2010
+#define OLD_DATA 0x2010
+#define DATA 0xe010
 	int i;
 	if(pdata == -1) 
 	{
@@ -197,10 +198,10 @@ int main(int argc, char **argv)
 	sa.sa_handler = handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGINT,&sa, NULL) == -1) 
-	{
-		printf("handler error\n");
-	}
+//	if (sigaction(SIGINT,&sa, NULL) == -1) 
+//	{
+//		printf("handler error\n");
+//	}
 
 	// Set default parameter values
 	nrun = 100000000; 
@@ -230,6 +231,8 @@ int main(int argc, char **argv)
 		if (strstr(buf, "-dwin")) { sscanf(argv[i+1], "%d",&d1.dwin); }
 		if (strstr(buf, "-mfreq")) { sscanf(argv[i+1], "%lf",&d1.mfreq); }
 	}
+
+printf("pport: %d\n", pport);
 
 	if (pport)  
 	{
@@ -266,6 +269,9 @@ int main(int argc, char **argv)
 	}
 
 	// The main running loop
+
+printf("STarting the run...\n");
+
    while(run<=nrun && d1.run)
 	{
 
@@ -289,6 +295,9 @@ int main(int argc, char **argv)
 			d1.adcmin = 1e99;
 			d1.mode = swmode;
 			d1.numblk = 0;
+
+printf("Calling px14run...\n");
+
 			px14run(spec, nblock);
 	
 			if (swmode == 2) 
@@ -425,7 +434,7 @@ void write_spec(double data[], int num, int swpos)
 	{
       toyrday (d1.secs, &yr, &da, &hr, &mn, &sc);
       d1.rday = da;
-      sprintf (d1.filname, "/home/loco/edges/data/low/%4d_%03d_%02d.acq", yr, da, hr);
+      sprintf (d1.filname, "/home/loco/edges/data/mro/low2/%4d/%4d_%03d_%02d_low2.acq", yr, yr, da, hr);
    }
 
 	if ((file1 = fopen (d1.filname, "a")) == NULL)
@@ -449,7 +458,7 @@ void write_spec(double data[], int num, int swpos)
 	  		fclose (file1);
 	  		d1.foutstatus = 0;
 	  		toyrday (d1.secs, &yr, &da, &hr, &mn, &sc);
-	  		sprintf (d1.filname, "/media/DATA/EDGES_data/%4d_%03d_%02d.acq", yr, da, hr);
+	  		sprintf (d1.filname, "/home/loco/edges/data/mro/low2/%4d/%4d_%03d_%02d_low2.acq", yr, yr, da, hr);
 	  		if ((file1 = fopen (d1.filname, "w")) == NULL)
 	    	{
 	      	d1.foutstatus = -99;
@@ -527,7 +536,7 @@ void write_status(
    struct tm timeinfo;
    // also inherits d1 from global context
 
-   sprintf(filename, "/media/DATA/EDGES_data/status_spectrometer.txt");
+   sprintf(filename, "/home/loco/edges/data/mro/low2/status_spectrometer.txt");
    if ((file = fopen(filename, "w")) == NULL)
 	{
 		printf ("Cannot write %s\n", d1.filname);
